@@ -3,7 +3,7 @@
     "name": "Résumé Intelligent",
     "version": "1.0",
     "description": "Obtenez un résumé concis de n'importe quelle page web en un clic.",
-    "permissions": ["activeTab", "scripting", "storage"], "host_permissions": ["https://api-inference.huggingface.co/*", "https://api.openai.com/*"], "action": {
+    "permissions": ["activeTab", "scripting", "storage"], "host_permissions": ["https://api-inference.huggingface.co/*", "https://api.openai.com/*", "https://router.huggingface.co/*"], "action": {
         "default_popup": "popup.html",
         "default_icon": {
             "16": "images/icon16.png",

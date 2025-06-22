@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const settings = result.summaryExtensionSettings;
         if (settings) {
             providerSelect.value = settings.provider || 'classic';
-            hfModelSelect.value = settings.hfModel || 'csebuetnlp/mt5_multilingual_XLSum'; // Valeur par défaut pour HF
+            hfModelSelect.value = settings.hfModel || 'csebuetnlp/mT5_multilingual_XLSum'; // Valeur par défaut pour HF
             hfApiKeyInput.value = settings.hfApiKey || '';
             openaiModelSelect.value = settings.openaiModel || 'gpt-3.5-turbo';
             openaiApiKeyInput.value = settings.openaiApiKey || '';
@@ -75,13 +75,88 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Algorithmes de Résumé ---
 
-    // Algorithme de résumé classique (basé sur les premières phrases)
+    // Algorithme de résumé classique sophistiqué
     function simpleSummarize(text, sentenceCount = 5) {
-        if (!text) return 'Aucun texte à résumer.';
+        if (!text || text.trim() === '') return 'Aucun texte à résumer.';
+
+        // 1. Nettoyage du texte et division en phrases
+        // Supprime les multiples espaces et les retours à la ligne inutiles
         text = text.replace(/\s+/g, ' ').trim();
+        // Divise le texte en phrases (peut être amélioré pour des cas très complexes)
         const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-        if (sentences.length === 0) return 'Impossible de trouver des phrases à résumer.';
-        return sentences.slice(0, sentenceCount).join(' ').trim();
+
+        if (sentences.length === 0) {
+            return 'Impossible de trouver des phrases à résumer.';
+        }
+
+        // 2. Liste de mots vides (à étendre pour d'autres langues si nécessaire)
+        const stopWords = new Set([
+            'le', 'la', 'les', 'un', 'une', 'des', 'de', 'du', 'd\'un', 'd\'une', 'd\'des', 'l\'',
+            'à', 'au', 'aux', 'ce', 'cet', 'cette', 'ces', 'en', 'dans', 'sur', 'pour', 'avec', 'sans',
+            'et', 'ou', 'ni', 'mais', 'donc', 'or', 'car', 'que', 'qui', 'quoi', 'où', 'quand', 'comment',
+            'est', 'sont', 'être', 'avoir', 'il', 'elle', 'ils', 'elles', 'je', 'tu', 'nous', 'vous',
+            'mon', 'ma', 'mes', 'ton', 'ta', 'tes', 'son', 'sa', 'ses', 'notre', 'nos', 'votre', 'vos', 'leur', 'leurs',
+            // Anglais (si le texte source est souvent anglais)
+            'a', 'an', 'the', 'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+            'do', 'does', 'did', 'but', 'or', 'nor', 'and', 'yet', 'so', 'for', 'on', 'at', 'by', 'of', 'from',
+            'in', 'to', 'with', 'without', 'this', 'that', 'these', 'those', 'he', 'she', 'it', 'they', 'i', 'you',
+            'my', 'your', 'his', 'her', 'its', 'our', 'their', 'me', 'him', 'us', 'them',
+        ]);
+
+        // 3. Calcul de la fréquence des mots (hors mots vides)
+        const wordFrequencies = new Map();
+        sentences.forEach(sentence => {
+            sentence.toLowerCase().split(/\W+/).forEach(word => {
+                if (word.length > 2 && !stopWords.has(word)) { // Ignorer les mots courts et les mots vides
+                    wordFrequencies.set(word, (wordFrequencies.get(word) || 0) + 1);
+                }
+            });
+        });
+
+        // Triez les mots par fréquence décroissante pour obtenir les mots-clés
+        const sortedKeywords = Array.from(wordFrequencies.entries()).sort((a, b) => b[1] - a[1]);
+        const topKeywords = sortedKeywords.slice(0, 10).map(entry => entry[0]); // Prend les 10 mots-clés les plus fréquents
+
+        // 4. Scoring des phrases
+        const scoredSentences = sentences.map((sentence, index) => {
+            let score = 0;
+            const lowerSentence = sentence.toLowerCase();
+
+            // Score basé sur la présence de mots-clés
+            topKeywords.forEach(keyword => {
+                if (lowerSentence.includes(keyword)) {
+                    score += wordFrequencies.get(keyword); // Plus la fréquence du mot est élevée, plus la phrase gagne de points
+                }
+            });
+
+            // Score basé sur la position (les premières et dernières phrases sont souvent importantes)
+            if (index === 0 || index === sentences.length - 1) {
+                score += 3; // Bonus pour les phrases introductives/conclusives
+            } else if (index < sentences.length * 0.2 || index > sentences.length * 0.8) {
+                score += 1; // Léger bonus pour les phrases au début/fin du texte
+            }
+
+            // Score basé sur la longueur (pénalise les phrases très courtes)
+            if (sentence.length < 30) { // Phrases de moins de 30 caractères sont moins pertinentes
+                score -= 2;
+            }
+
+            return { sentence, score, index }; // Garde l'index pour trier à nouveau plus tard
+        });
+
+        // 5. Sélection des N meilleures phrases par score, puis tri par ordre d'apparition
+        const summary = scoredSentences
+            .sort((a, b) => b.score - a.score) // Trie par score (descendant)
+            .slice(0, sentenceCount) // Prend les N meilleures
+            .sort((a, b) => a.index - b.index) // Trie par leur ordre original dans le texte
+            .map(item => item.sentence)
+            .join(' ')
+            .trim();
+
+        if (summary.length === 0) {
+            return 'Impossible de générer un résumé pertinent avec l\'algorithme classique.';
+        }
+        return summary;
     }
 
     // Appelle l'API Hugging Face pour le résumé
@@ -92,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // URL d'API pour Hugging Face (router.huggingface.co est la nouvelle URL générique)
         const apiUrl = `https://router.huggingface.co/hf-inference/models/${model}`;
         
-        let prompt = text;
+        let prompt = `summarize ${outputLanguage}: ${text}`;
         // La gestion de la langue de sortie est complexe et dépend de l'entraînement spécifique du modèle.
         // Pour les modèles mT5 comme XLSum/CrossSum, la langue de sortie est souvent la langue de l'entrée.
         // Pour forcer, on pourrait faire: `prompt = `summarize ${outputLanguage}: ${text}`;`
@@ -116,6 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             })
         });
+        
 
         if (!response.ok) {
             const errorBody = await response.json().catch(() => ({}));
