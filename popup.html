@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résumé Intelligent</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            width: 350px;
+            padding: 15px;
+            background-color: #f4f7f6;
+            color: #333;
+            text-align: center;
+        }
+        h2 {
+            color: #2c3e50;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .settings-section {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: left;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .settings-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95rem;
+        }
+        .settings-section select,
+        .settings-section input[type="password"],
+        .settings-section input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 8px 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        .settings-section input[type="password"]:focus,
+        .settings-section select:focus,
+        .settings-section input[type="number"]:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+            outline: none;
+        }
+        .settings-section .info-text {
+            font-size: 0.8rem;
+            color: #777;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        #status-message {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #555;
+            min-height: 20px;
+        }
+        #summary-output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            min-height: 100px;
+            text-align: left;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #444;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #summary-output.empty {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h2>Résumé Intelligent</h2>
+
+    <div class="settings-section">
+        <label for="provider-select">Service de résumé :</label>
+        <select id="provider-select">
+            <option value="classic">Classique (local)</option>
+            <option value="huggingface">Hugging Face</option>
+            <option value="openai">OpenAI (ChatGPT)</option>
+        </select>
+
+        <div id="huggingface-settings" style="display: none;">
+            <label for="hf-model-select">Modèle Hugging Face :</label>
+            <select id="hf-model-select">
+                <option value="csebuetnlp/mt5_multilingual_XLSum">mt5_multilingual_XLSum (Recommandé)</option>
+                <option value="csebuetnlp/mt5_m2m_crossSum">mt5_m2m_crossSum</option>
+                <option value="csebuetnlp/mt5_m2o_english_crossSum">mt5_m2o_english_crossSum</option>
+                <option value="csebuetnlp/mt5_m2o_arabic_crossSum">mt5_m2o_arabic_crossSum</option>
+                <option value="MaagDeveloper/csebuetnlp-mt5_multilingual_XLSum">MaagDeveloper/mt5_multilingual_XLSum</option>
+                <option value="facebook/bart-large-cnn">facebook/bart-large-cnn (Test de base)</option> </select>
+            <label for="hf-api-key">Clé API Hugging Face :</label>
+            <input type="password" id="hf-api-key" placeholder="Votre clé d'accès Hugging Face">
+            <span class="info-text">Obtenez votre clé sur <a href="https://huggingface.co/settings/tokens" target="_blank">Hugging Face Tokens</a>.</span>
+        </div>
+
+        <div id="openai-settings" style="display: none;">
+            <label for="openai-model-select">Modèle OpenAI :</label>
+            <select id="openai-model-select">
+                <option value="gpt-3.5-turbo">gpt-3.5-turbo (Recommandé)</option>
+                <option value="gpt-4o">gpt-4o</option>
+                <option value="gpt-4-turbo">gpt-4-turbo</option>
+            </select>
+            <label for="openai-api-key">Clé API OpenAI :</label>
+            <input type="password" id="openai-api-key" placeholder="Votre clé API OpenAI">
+            <span class="info-text">Obtenez votre clé sur <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API Keys</a>.</span>
+        </div>
+
+        <label for="output-language-select">Langue du résumé :</label>
+        <select id="output-language-select">
+            <option value="auto">Détection automatique</option>
+            <option value="en">Anglais</option>
+            <option value="fr">Français</option>
+            <option value="es">Espagnol</option>
+            <option value="de">Allemand</option>
+            <option value="zh">Chinois</option>
+            <option value="ar">Arabe</option>
+            <option value="ru">Russe</option>
+            <option value="hi">Hindi</option>
+        </select>
+        <span class="info-text">Si 'Détection automatique', le résumé sera dans la langue d'origine.</span>
+
+        <label for="summary-length-input">Longueur du résumé (phrases) :</label>
+        <input type="number" id="summary-length-input" value="5" min="1" max="20">
+        <span class="info-text">Pour le mode Classique et influence les LLM.</span>
+    </div>
+
+    <button id="summarize-btn">Résumer cette page</button>
+    <div id="status-message"></div>
+    <div id="summary-output" class="empty">Le résumé apparaîtra ici.</div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
